@@ -23,11 +23,11 @@ MIUID/
     ├── __init__.py             # 插件注册入口
     ├── __full__.py
     ├── version.py
-    ├── miuid_<feature>/        # 一个目录负责一个命令域
+    ├── mijia_<feature>/        # 一个目录负责一个命令域
     │   ├── __init__.py         # SV 与触发器注册，只放简单入口逻辑
     │   └── <feature>_services.py
-    ├── miuid_config/
-    ├── miuid_help/
+    ├── mijia_config/
+    ├── mijia_help/
     └── utils/
         ├── database/           # 数据表与数据访问，一张表一个文件
         ├── utils/              # 与业务无关的通用函数

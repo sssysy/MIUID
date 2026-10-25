@@ -8,6 +8,9 @@ authors = [
 requires-python = ">=3.12"
 readme = "README.md"
 license = {file = "LICENSE"}
+dependencies = [
+    "mijiaAPI==5.0.0",
+]
 
 
 [tool.pdm]

@@ -4,8 +4,8 @@ from PIL import Image
 
 from gsuid_core.status.plugin_status import register_status
 
-from ..version import MIUID_version
 from ..utils.resource.RESOURCE_PATH import RESOURCE_PATH
+from ..version import MIUID_version
 
 ICON = Path(__file__).parent.parent.parent / "ICON.png"
 

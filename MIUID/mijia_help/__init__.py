@@ -7,10 +7,10 @@ from gsuid_core.sv import SV, get_plugin_available_prefix
 
 from .get_help import ICON, get_help
 
-sv_miuid_help = SV("MIUID 帮助")
+sv_mijia_help = SV("MIUID 帮助")
 
 
-@sv_miuid_help.on_fullmatch("帮助", block=True)
+@sv_mijia_help.on_fullmatch("帮助", block=True)
 async def send_help(bot: Bot, ev: Event) -> None:
     await bot.send(await get_help(ev.user_pm))
 

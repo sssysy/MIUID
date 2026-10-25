@@ -1,0 +1,34 @@
+{
+  "账号": {
+    "desc": "米家账号登录与查看",
+    "data": [
+      {
+        "name": "登录",
+        "desc": "扫码登录米家账号",
+        "eg": "mi登录",
+        "highlight": 2,
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "登出",
+        "desc": "登出默认米家账号",
+        "eg": "mi登出",
+        "highlight": 2,
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "查看",
+        "desc": "查看已绑定的米家账号",
+        "eg": "mi查看",
+        "highlight": 2,
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  }
+}
