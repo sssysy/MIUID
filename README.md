@@ -1,64 +1,56 @@
 # MIUID
 
-MIUID 是面向 GsCore 的插件基础框架。当前版本提供可运行的加载入口、配置、帮助、状态卡和示例命令，业务模块按同一模式继续添加。
+<p align="center">
+  <a href="ICON.png">
+    <img src="ICON.png" width="227" height="227" alt="MIUID">
+  </a>
+</p>
+<h1 align="center">MIUID 0.1.0</h1>
+<h4 align="center">基于 gsuid_core 的米家账号插件</h4>
 
-## 目录
+<p align="center">
+  <a href="https://www.python.org/" target="_blank"><img src="https://img.shields.io/badge/Python-3.12+-blue" alt="Python 3.12+"></a>
+  <a href="https://github.com/Genshin-bots/gsuid_core" target="_blank"><img src="https://img.shields.io/badge/gsuid_core-0.11.1+-orange" alt="gsuid_core 0.11.1+"></a>
+</p>
 
-```text
-MIUID/
-├── __init__.py
-├── __nest__.py
-├── pyproject.toml
-├── ruff.toml
-├── pyrightconfig.json
-├── ICON.png
-└── MIUID/
-    ├── __init__.py
-    ├── __full__.py
-    ├── version.py
-    ├── miuid_config/
-    │   ├── __init__.py
-    │   ├── config_default.py
-    │   └── miuid_config.py
-    ├── miuid_help/
-    │   ├── __init__.py
-    │   ├── get_help.py
-    │   └── help.json
-    ├── miuid_status/
-    │   └── __init__.py
-    ├── miuid_template/
-    │   └── __init__.py
-    └── utils/
-        └── resource/
-            ├── __init__.py
-            └── RESOURCE_PATH.py
-```
+<div align="center">
+  <a href="https://docs.sayu-bot.com/" target="_blank">安装文档</a> &nbsp; · &nbsp;
+  <a href="https://github.com/Genshin-bots/gsuid_core" target="_blank">gsuid_core</a>
+</div>
 
-## 命令
+## 丨安装提醒
 
-默认前缀为 `miuid`。示例：
+> **注意：该插件为 [早柚核心(gsuid_core)](https://github.com/Genshin-bots/gsuid_core) 的扩展，具体安装方式可参考上方安装文档**
+>
+> 🚧 项目处于早期开发阶段，有问题可提 issue 或 pr 🚧
 
-```text
-miuid ping
-miuid 帮助
-```
+## 丨命令列表
 
-以后添加业务模块时，在 `MIUID/MIUID/` 下新建 `miuid_<feature>/`，让模块在导入时注册 `SV` 与触发器即可。
+<details><summary>账号管理</summary>
 
-## 配置与数据
+| 命令 | 说明 |
+|------|:------:|
+| `mi登录` | 扫码登录米家账号，并将登录账号设为当前默认账号 |
+| `mi登出` | 登出并删除当前默认米家账号，其他已保存账号不受影响 |
+| `mi查看` | 查看当前用户已登录的米家账号与默认账号标记 |
 
-运行时文件写入 `data/MIUID/`：
+</details>
 
-- `data/MIUID/config.json`：插件配置
-- `data/MIUID/cache/`：缓存
-- `data/MIUID/resource/`：下载或用户上传的资源
+<details><summary>其他</summary>
 
-## 验证
+| 命令 | 说明 |
+|------|:------:|
+| `mi帮助` | 获取 MIUID 帮助图 |
 
-在 Core 仓库根目录执行：
+</details>
 
-```powershell
-uv run ruff check gsuid_core/plugins/MIUID
-uv run ruff format --check gsuid_core/plugins/MIUID
-uv run basedpyright gsuid_core/plugins/MIUID
-```
+## 丨其他
+
+- 本项目仅供学习使用，请勿用于商业用途
+- 请遵守小米账号与米家服务的使用条款
+
+## 致谢
+
+- [Wuyi 无疑](https://github.com/KimigaiiWuyi)
+- [gsuid_core](https://github.com/Genshin-bots/gsuid_core)
+- [mijiaAPI](https://github.com/Do1e/mijia-api)
