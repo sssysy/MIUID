@@ -1,0 +1,9 @@
+"""MIUID plugin entry."""
+
+from gsuid_core.sv import Plugins
+
+Plugins(
+    name="MIUID",
+    force_prefix=["miuid"],
+    allow_empty_prefix=False,
+)
