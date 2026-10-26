@@ -229,6 +229,6 @@ async def execute(bot: Bot, ev: Event) -> None:
     if kind == "power":
         await bot.send(f"已{'开启' if value == '开' else '关闭'} {device['name']}")
     elif kind == "property":
-        await bot.send(f"已设置 {device['name']} 的 {name} 为 {value}")
+        await bot.send(f"已设置 {device['name']} 的「{name}」为 {value}")
     else:
-        await bot.send(f"已执行 {device['name']} 的动作 {name}")
+        await bot.send(f"已执行 {device['name']} 的动作「{name}」")

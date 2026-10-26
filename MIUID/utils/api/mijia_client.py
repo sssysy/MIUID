@@ -10,6 +10,8 @@ from mijiaAPI.devices import DevAction, DevProp
 
 from gsuid_core.logger import logger
 
+from ..maps import display_property_name, match_property_names, match_value_option
+
 
 class MijiaClientError(Exception):
     """米家设备访问失败。"""
@@ -133,19 +135,13 @@ class MijiaDeviceSession:
         self._devices = devices
         return devices
 
-    async def execute(
-        self, text: str
-    ) -> tuple[MijiaDeviceInfo, str, str, str]:
+    async def execute(self, text: str) -> tuple[MijiaDeviceInfo, str, str, str]:
         async with self._lock:
             try:
-                device, operation = self._split_device(
-                    await self._ensure_devices(), text
-                )
+                device, operation = self._split_device(await self._ensure_devices(), text)
                 if not operation:
                     raise MijiaClientError("请发送：mi执行 设备名 操作")
-                kind, name, value = await asyncio.to_thread(
-                    self._execute_sync, device, operation
-                )
+                kind, name, value = await asyncio.to_thread(self._execute_sync, device, operation)
                 return device, kind, name, value
             except MijiaClientError:
                 raise
@@ -177,9 +173,7 @@ class MijiaDeviceSession:
     async def read_auth_json(self) -> str:
         if self._api is None:
             return self._auth_json
-        self._auth_json = await asyncio.to_thread(
-            self._api.auth_data_path.read_text, encoding="utf-8"
-        )
+        self._auth_json = await asyncio.to_thread(self._api.auth_data_path.read_text, encoding="utf-8")
         return self._auth_json
 
     def accept_auth_json(self, auth_json: str) -> None:
@@ -256,9 +250,7 @@ class MijiaDeviceSession:
             raise MijiaDeviceAmbiguousError(f"设备“{query}”匹配到多个设备，请修改米家设备名称")
         return matches[0]
 
-    def _split_device(
-        self, devices: list[MijiaDeviceInfo], text: str
-    ) -> tuple[MijiaDeviceInfo, str]:
+    def _split_device(self, devices: list[MijiaDeviceInfo], text: str) -> tuple[MijiaDeviceInfo, str]:
         candidates: list[tuple[int, MijiaDeviceInfo, int]] = []
         normalized_text = self._normalize_name(text)
         for device in devices:
@@ -405,9 +397,7 @@ class MijiaDeviceSession:
             self._specs[spec_type] = spec
         return spec
 
-    def _execute_sync(
-        self, device_info: MijiaDeviceInfo, operation: str
-    ) -> tuple[str, str, str]:
+    def _execute_sync(self, device_info: MijiaDeviceInfo, operation: str) -> tuple[str, str, str]:
         spec = self._load_spec(device_info)
         properties = spec.get("properties")
         actions = spec.get("actions")
@@ -417,33 +407,38 @@ class MijiaDeviceSession:
 
         if len(tokens) == 2:
             prop_name, value = tokens
-            if self._match_capability(prop_items, prop_name) is None:
-                raise MijiaDeviceControlError(f"设备不支持属性“{prop_name}”")
-            self._set_property(device_info, prop_name, value)
-            return "property", prop_name, value
+            canonical_name = self._set_property(device_info, prop_name, value)
+            return (
+                "property",
+                self._display_name(prop_items, canonical_name),
+                value,
+            )
 
         operation = tokens[0]
         if operation in ("开", "关"):
-            prop = self._match_capability(prop_items, "on")
-            if prop is None:
+            if self._match_capability(prop_items, "on") is None:
                 raise MijiaDeviceControlError("该设备没有可写的 on 属性")
             self._set_property(device_info, "on", operation)
             return "power", "on", operation
 
-        if self._match_capability(action_items, operation) is not None:
-            self._run_action(device_info, operation)
-            return "action", operation, ""
+        action_name = self._match_display_name(action_items, operation)
+        if action_name is not None:
+            self._run_action(device_info, action_name)
+            return "action", self._display_name(action_items, action_name), ""
 
-        if self._match_capability(prop_items, operation) is not None:
+        if self._match_display_name(prop_items, operation) is not None:
             raise MijiaDeviceControlError("设置属性时需要提供值，例如：mi执行 台灯 亮度 60")
         raise MijiaDeviceControlError(f"设备不支持操作“{operation}”")
 
-    def _set_property(self, device_info: MijiaDeviceInfo, prop_name: str, raw_value: str) -> None:
+    def _set_property(self, device_info: MijiaDeviceInfo, prop_name: str, raw_value: str) -> str:
         spec = self._load_spec(device_info)
         properties = spec.get("properties")
         if not isinstance(properties, list):
             raise MijiaClientError("设备规格没有属性列表")
-        target = self._match_capability(properties, prop_name)
+        canonical_name = self._match_display_name(properties, prop_name)
+        if canonical_name is None:
+            raise MijiaDeviceControlError(f"设备不支持属性“{prop_name}”")
+        target = self._match_capability(properties, canonical_name)
         if target is None:
             raise MijiaDeviceControlError(f"设备不支持属性“{prop_name}”")
         if "w" not in str(target.get("rw", "")):
@@ -456,6 +451,7 @@ class MijiaDeviceSession:
         result = api.set_devices_prop(method)
         if result.get("code") not in (0, 1):
             raise MijiaDeviceControlError(str(result.get("message", "设备拒绝设置属性")))
+        return canonical_name
 
     def _run_action(self, device_info: MijiaDeviceInfo, action_name: str) -> None:
         spec = self._load_spec(device_info)
@@ -485,19 +481,55 @@ class MijiaDeviceSession:
         return None
 
     @staticmethod
+    def _match_display_name(items: list[object], name: str) -> str | None:
+        properties: list[tuple[str, str]] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            item_name = str(item.get("name", ""))
+            if not item_name:
+                continue
+            if MijiaDeviceSession._match_capability([item], name) is not None:
+                return item_name
+            properties.append((item_name, str(item.get("description", ""))))
+
+        matched = match_property_names(name, properties)
+        if not matched:
+            return None
+        if len(matched) > 1:
+            descriptions = dict(properties)
+            labels = "、".join(
+                f"{display_property_name(item_name, descriptions[item_name])}（{item_name}）" for item_name in matched
+            )
+            raise MijiaDeviceControlError(f"“{name}”匹配到多个属性，请指定：{labels}")
+        return matched[0]
+
+    @staticmethod
+    def _display_name(items: list[object], canonical_name: str) -> str:
+        target = MijiaDeviceSession._match_capability(items, canonical_name)
+        if target is None:
+            return canonical_name
+        return display_property_name(
+            canonical_name,
+            str(target.get("description", "")),
+        )
+
+    @staticmethod
     def _coerce_value(prop: DevProp, raw_value: str) -> bool | int | float | str:
         normalized = raw_value.strip().lower()
         value_list = prop.__dict__.get("value_list")
         if isinstance(value_list, list):
+            options: list[tuple[object, str]] = []
             for item in value_list:
-                if not isinstance(item, dict):
+                if not isinstance(item, dict) or "value" not in item:
                     continue
-                labels = (
-                    str(item.get("desc_zh_cn") or ""),
-                    str(item.get("description") or "").split(" / ", 1)[0],
-                )
-                if any(label.strip().lower() == normalized for label in labels if label):
-                    return item["value"]
+                for key in ("desc_zh_cn", "description"):
+                    for label in str(item.get(key) or "").split(" / "):
+                        if label.strip():
+                            options.append((item["value"], label))
+            matched = match_value_option(raw_value, options)
+            if matched is not None:
+                return matched
         if prop.type == "bool":
             if normalized in ("true", "1", "on", "开"):
                 return True
@@ -525,9 +557,7 @@ class MijiaClientRegistry:
     def __init__(self) -> None:
         self._sessions = {}
 
-    async def get(
-        self, user_id: str, mijia_user_id: str, auth_json: str
-    ) -> MijiaDeviceSession:
+    async def get(self, user_id: str, mijia_user_id: str, auth_json: str) -> MijiaDeviceSession:
         key = (user_id, mijia_user_id)
         session = self._sessions.get(key)
         if session is not None and session.source_auth_json != auth_json:

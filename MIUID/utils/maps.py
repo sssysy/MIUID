@@ -195,6 +195,52 @@ def display_value_option(value: object, label: str) -> str:
     return f"{value}={translate_value_label(label)}"
 
 
+def match_property_names(
+    user_input: str,
+    properties: list[tuple[str, str]],
+) -> list[str]:
+    target = _compact(user_input)
+    if not target:
+        return []
+
+    scored: list[tuple[int, str]] = []
+    for name, description in properties:
+        display_name = display_property_name(name, description)
+        exact = (name, display_name)
+        base, channel = split_property_name(name)
+        if channel is not None and base in PROPERTY_NAMES:
+            candidates = (*exact, PROPERTY_NAMES[base])
+        else:
+            candidates = exact
+        score = next(
+            (index for index, candidate in enumerate(candidates) if _compact(candidate) == target),
+            None,
+        )
+        if score is not None:
+            scored.append((score, name))
+
+    if not scored:
+        return []
+    best = min(score for score, _ in scored)
+    matched: list[str] = []
+    for score, name in scored:
+        if score == best and name not in matched:
+            matched.append(name)
+    return matched
+
+
+def match_value_option(
+    user_input: str,
+    options: list[tuple[object, str]],
+) -> object | None:
+    target = _compact(user_input)
+    for value, label in options:
+        labels = (str(value), label, translate_value_label(label))
+        if any(_compact(candidate) == target for candidate in labels):
+            return value
+    return None
+
+
 def translate_value_label(label: str) -> str:
     text = label.strip().rstrip("。")
     if not text or _CJK_PATTERN.search(text):
@@ -238,3 +284,7 @@ def _is_number(value: str) -> bool:
     except ValueError:
         return False
     return True
+
+
+def _compact(value: str) -> str:
+    return re.sub(r"[\s_-]+", "", value).casefold()
