@@ -5,9 +5,10 @@ from typing import TypeVar
 from sqlalchemy import UniqueConstraint, delete, update
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import Field, col, select
+from sqlmodel import Field, SQLModel, col, select
 
 from gsuid_core.utils.database.base_models import BaseIDModel, with_read_session, with_session
+from gsuid_core.webconsole.mount_app import GsAdminModel, PageSchema, site
 
 T_MijiaUser = TypeVar("T_MijiaUser", bound="MijiaUser")
 
@@ -96,3 +97,22 @@ class MijiaUser(BaseIDModel, table=True):
             )
         )
         return result.rowcount if isinstance(result, CursorResult) else 0
+
+
+class MijiaUserAdminModel(SQLModel, table=True):
+    """控制台展示模型，仅映射非敏感列。"""
+
+    __tablename__ = "mijiauser"
+    __table_args__ = {"extend_existing": True}
+
+    id: int | None = Field(default=None, primary_key=True, title="序号")
+    user_id: str = Field(title="机器人用户ID")
+    mijia_user_id: str = Field(title="米家用户ID")
+    is_default: bool = Field(default=False, title="是否默认账号")
+
+
+@site.register_admin
+class MijiaUserAdmin(GsAdminModel):
+    pk_name = "id"
+    page_schema = PageSchema(label="米家账号", icon="fa fa-mobile")
+    model = MijiaUserAdminModel

@@ -30,5 +30,37 @@
         "need_admin": false
       }
     ]
+  },
+  "设备": {
+    "desc": "米家设备列表、查看与控制",
+    "data": [
+      {
+        "name": "设备列表",
+        "desc": "列出当前米家账号所有家庭的全部设备",
+        "eg": "mi设备列表",
+        "highlight": 2,
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "查看",
+        "desc": "查看设备能力与实时状态",
+        "eg": "mi查看 台灯",
+        "highlight": 2,
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "执行",
+        "desc": "统一执行开关、属性或动作",
+        "eg": "mi执行 台灯 开",
+        "highlight": 2,
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
   }
 }

@@ -1,5 +1,3 @@
-"""MIUID plugin entry."""
-
 from gsuid_core.sv import Plugins
 
 Plugins(
