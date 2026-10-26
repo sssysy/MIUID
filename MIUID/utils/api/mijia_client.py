@@ -43,13 +43,25 @@ class MijiaDeviceInfo(TypedDict):
     is_online: bool | None
 
 
+class MijiaValueOption(TypedDict):
+    value: str
+    label: str
+
+
 class MijiaCapability(TypedDict):
     name: str
     description: str
     kind: str
     readable: bool
     writable: bool
-    values: list[str]
+    values: list[MijiaValueOption]
+    value_type: str
+
+
+class MijiaStatusInfo(TypedDict):
+    value: str
+    value_type: str
+    value_options: list[MijiaValueOption]
 
 
 class MijiaDeviceSession:
@@ -78,7 +90,7 @@ class MijiaDeviceSession:
 
     async def inspect_device(
         self, query: str
-    ) -> tuple[MijiaDeviceInfo, list[MijiaCapability], dict[str, str]]:
+    ) -> tuple[MijiaDeviceInfo, list[MijiaCapability], dict[str, MijiaStatusInfo]]:
         async with self._lock:
             try:
                 device = self._find_device(await self._ensure_devices(), query)
@@ -292,7 +304,7 @@ class MijiaDeviceSession:
                 if not isinstance(prop, dict):
                     continue
                 rw = str(prop.get("rw", ""))
-                values: list[str] = []
+                values: list[MijiaValueOption] = []
                 value_list = prop.get("value-list")
                 if isinstance(value_list, list):
                     for item in value_list:
@@ -300,7 +312,8 @@ class MijiaDeviceSession:
                             continue
                         label = str(item.get("desc_zh_cn") or item.get("description") or "")
                         if label:
-                            values.append(f"{item.get('value')}={label}")
+                            value = str(item.get("value", ""))
+                            values.append(MijiaValueOption(value=value, label=label))
                 capabilities.append(
                     MijiaCapability(
                         name=str(prop.get("name", "")),
@@ -309,6 +322,7 @@ class MijiaDeviceSession:
                         readable="r" in rw,
                         writable="w" in rw,
                         values=values,
+                        value_type=str(prop.get("type", "")),
                     )
                 )
         actions = spec.get("actions")
@@ -324,11 +338,12 @@ class MijiaDeviceSession:
                         readable=False,
                         writable=False,
                         values=[],
+                        value_type="",
                     )
                 )
         return capabilities
 
-    def _load_status(self, device_info: MijiaDeviceInfo) -> dict[str, str]:
+    def _load_status(self, device_info: MijiaDeviceInfo) -> dict[str, MijiaStatusInfo]:
         spec = self._load_spec(device_info)
         api = self._ensure_api()
         properties = spec.get("properties")
@@ -336,6 +351,7 @@ class MijiaDeviceSession:
             return {}
         requests: list[dict[str, object]] = []
         names: list[str] = []
+        metadata: list[tuple[str, list[MijiaValueOption]]] = []
         for prop in properties:
             if not isinstance(prop, dict):
                 continue
@@ -348,16 +364,35 @@ class MijiaDeviceSession:
             item["did"] = device_info["did"]
             requests.append(item)
             names.append(str(prop.get("name", "")))
+            value_options: list[MijiaValueOption] = []
+            value_list = prop.get("value-list")
+            if isinstance(value_list, list):
+                for value_item in value_list:
+                    if not isinstance(value_item, dict):
+                        continue
+                    label = str(value_item.get("desc_zh_cn") or value_item.get("description") or "")
+                    if label:
+                        value_options.append(
+                            MijiaValueOption(
+                                value=str(value_item.get("value", "")),
+                                label=label,
+                            )
+                        )
+            metadata.append((str(prop.get("type", "")), value_options))
         if not requests:
             return {}
         results = api.get_devices_prop(requests)
         if not isinstance(results, list):
             return {}
-        status: dict[str, str] = {}
-        for name, result in zip(names, results):
+        status: dict[str, MijiaStatusInfo] = {}
+        for name, result, (value_type, value_options) in zip(names, results, metadata):
             if not isinstance(result, dict) or result.get("code") != 0:
                 continue
-            status[name] = str(result.get("value", ""))
+            status[name] = MijiaStatusInfo(
+                value=str(result.get("value", "")),
+                value_type=value_type,
+                value_options=value_options,
+            )
         return status
 
     def _load_spec(self, device_info: MijiaDeviceInfo) -> dict[str, object]:
