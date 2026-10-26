@@ -67,6 +67,18 @@ class MihomeDevice(SQLModel, table=True):
 - 不使用 `time.sleep`，改用 `asyncio.sleep`。
 - 不在事件循环中直接执行同步网络或文件 I/O。
 - 新增函数必须保持异步调用链完整，不能用同步包装函数绕过。
+- 包装同步 SDK 时统一使用 `asyncio.to_thread`，禁止依赖
+  `gsuid_core.pool.to_thread` 的装饰器语义。直接把待执行函数传给它可能得到
+  函数本身，随后 `asyncio.create_task` 会报 `a coroutine was expected`。
+
+```python
+result = await asyncio.to_thread(sync_call, arg)
+
+# 仅在确实需要并发时这样写；不要把 asyncio.to_thread 的返回值再传给
+# gsuid_core.pool.to_thread。
+task = asyncio.create_task(asyncio.to_thread(sync_call, arg))
+result = await task
+```
 
 ## 注释
 

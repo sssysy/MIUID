@@ -9,7 +9,6 @@ from mijiaAPI import DeviceGetError, DeviceSetError, LoginError, get_device_info
 from mijiaAPI.devices import DevAction, DevProp
 
 from gsuid_core.logger import logger
-from gsuid_core.pool import to_thread
 
 
 class MijiaClientError(Exception):
@@ -83,8 +82,8 @@ class MijiaDeviceSession:
         async with self._lock:
             try:
                 device = self._find_device(await self._ensure_devices(), query)
-                capabilities = await to_thread(self._load_capabilities, device)
-                status = await to_thread(self._load_status, device)
+                capabilities = await asyncio.to_thread(self._load_capabilities, device)
+                status = await asyncio.to_thread(self._load_status, device)
                 return device, capabilities, status
             except MijiaClientError:
                 raise
@@ -95,7 +94,7 @@ class MijiaDeviceSession:
     async def close(self) -> None:
         async with self._lock:
             if self._api is not None:
-                await to_thread(self._api.session.close)
+                await asyncio.to_thread(self._api.session.close)
                 self._api = None
             if self._temp_dir is not None:
                 self._temp_dir.cleanup()
@@ -112,7 +111,7 @@ class MijiaDeviceSession:
         if not force and self._devices is not None:
             return self._devices
         if self._devices_task is None:
-            self._devices_task = asyncio.create_task(to_thread(self._load_devices))
+            self._devices_task = asyncio.create_task(asyncio.to_thread(self._load_devices))
         task = self._devices_task
         try:
             devices = await asyncio.shield(task)
@@ -132,7 +131,7 @@ class MijiaDeviceSession:
                 )
                 if not operation:
                     raise MijiaClientError("请发送：mi执行 设备名 操作")
-                kind, name, value = await to_thread(
+                kind, name, value = await asyncio.to_thread(
                     self._execute_sync, device, operation
                 )
                 return device, kind, name, value
@@ -149,6 +148,7 @@ class MijiaDeviceSession:
         if self._api is None:
             self._temp_dir = tempfile.TemporaryDirectory(prefix="mijia-device-")
             auth_path = Path(self._temp_dir.name) / "auth.json"
+            # _ensure_api 只在线程中调用，临时凭据写入不能回到事件循环。
             auth_path.write_text(self._auth_json, encoding="utf-8")
             self._api = mijiaAPI(str(auth_path))
             if not self._api.available:
@@ -165,7 +165,9 @@ class MijiaDeviceSession:
     async def read_auth_json(self) -> str:
         if self._api is None:
             return self._auth_json
-        self._auth_json = await to_thread(self._api.auth_data_path.read_text, encoding="utf-8")
+        self._auth_json = await asyncio.to_thread(
+            self._api.auth_data_path.read_text, encoding="utf-8"
+        )
         return self._auth_json
 
     def accept_auth_json(self, auth_json: str) -> None:
